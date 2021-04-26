@@ -2,12 +2,13 @@ import numpy as np
 
 
 class AdalineAlgo:
-    def __init__(self, rate=0.01, niter=15):
+    def __init__(self, rate=0.01, niter=15, shuffle = True):
         self.learning_rate = rate
         self.niter = niter
+        self.shuffle = shuffle
 
-        # Number of Incorrect classifications
-        self.errors = []
+        # Weight's vector
+        self.weight = []
 
         # Cost function
         self.cost_ = []
@@ -29,31 +30,52 @@ class AdalineAlgo:
         X_bias[:, 1:] = X
         X = X_bias
 
-        # weights - set size of weight Vector
+        # initialize weights
         np.random.seed(1)
         self.weight = np.random.rand(col + 1)
 
         # training
         for _ in range(self.niter):
-            """
-            output: Common output
-            y: Desired output
-            """
-            output = self.net_input(X)
-            errors = y - output  # vector
+            if self.shuffle:
+                X, y = self._shuffle(X, y)
 
-            """
-            We defined: X.T[0] = 1 
-            this is the reason why the bias calc (= self.weight[0])
-            will be equal to: 
-            self.weight[0] += self.learning_rate * errors
-            """
-            self.weight += self.learning_rate * (X.T @ errors)
-            # self.weight[1:] += self.learning_rate * (X.T @ errors)
-            # self.weight[0] += self.learning_rate * errors.sum()
-            cost = (errors ** 2).sum() / 2.0
-            self.cost_.append(cost)
+            cost = []
+            for xi, target in zip(X, y):
+                cost.append(self._update_weights(xi, target))
+            avg_cost = sum(cost) / len(y)
+            self.cost_.append(avg_cost)
+
         return self
+
+    def _update_weights(self, xi, target):
+        """
+        output: Common output
+        y: Desired output
+        :param xi:
+        :param target:
+        :return:
+        """
+        output = self.net_input(xi)
+        error = target - output
+        """
+        We defined: X.T[0] = 1 
+        this is the reason why the bias calc (= self.weight[0])
+        will be equal to: 
+        self.weight[0] += self.learning_rate * errors
+        """
+        self.weight += self.learning_rate * xi.dot(error)
+        cost = 0.5 * (error ** 2)
+        return cost
+
+    def _shuffle(self, X, y):
+        """
+        Shuffle training data with np random permutation
+        :param X:
+        :param y:
+        :return:
+        """
+        per = np.random.permutation(len(y))
+        return X[per], y[per]
 
     def net_input(self, X):
         """
@@ -62,7 +84,6 @@ class AdalineAlgo:
         :return:
         """
         return X @ self.weight
-        # return (X @ self.weight[1:]) + self.weight[0]
 
     def activation(self, X):
         """
@@ -88,8 +109,7 @@ class AdalineAlgo:
             X_bias[:, 1:] = X
             X = X_bias
 
-        return np.where(self.activation(X) >= 0.0, 1, -1)
-        # return np.where(self.activation(X) >= 0.0, 1, -1)
+        return np.where(self.activation(X) > 0.0, 1, -1)
 
     def score(self, X, y):
         """
@@ -101,5 +121,4 @@ class AdalineAlgo:
         """
         wrong_prediction = abs((self.predict(X) - y) / 2).sum()
         self.score_ = (len(X) - wrong_prediction) / len(X)
-        # print("wrong_prediction ", wrong_prediction)
         return self.score_
