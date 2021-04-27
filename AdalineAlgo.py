@@ -2,7 +2,7 @@ import numpy as np
 
 
 class AdalineAlgo:
-    def __init__(self, rate=0.01, niter=15, shuffle = True):
+    def __init__(self, rate=0.01, niter=15, shuffle=True):
         self.learning_rate = rate
         self.niter = niter
         self.shuffle = shuffle
